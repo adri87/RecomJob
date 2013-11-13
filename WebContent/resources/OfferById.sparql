@@ -1,0 +1,20 @@
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX lmftypes: <http://www.newmedialab.at/lmf/types/1.0/>
+PREFIX sioc: <http://rdfs.org/sioc/ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX yt: <http://gdata.youtube.com/schemas/2007#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX context: <http://localhost:8080/LMF-2.6.0/context/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX local: <http://localhost:8080/LMF-2.6.0/resource/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX mao: <http://www.w3.org/ns/ma-ont#>
+PREFIX ldp: <http://www.w3.org/ns/ldp#>
+SELECT ?offer WHERE {
+  ?offer rdf:type foaf:Person .
+  ?offer foaf:id "Resource"
+}
