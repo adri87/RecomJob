@@ -9,9 +9,12 @@ import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.common.Weighting;
 import org.apache.mahout.cf.taste.eval.IRStatistics;
 import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
+import org.apache.mahout.cf.taste.eval.RecommenderEvaluator;
 import org.apache.mahout.cf.taste.eval.RecommenderIRStatsEvaluator;
+import org.apache.mahout.cf.taste.impl.eval.AverageAbsoluteDifferenceRecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.eval.GenericRecommenderIRStatsEvaluator;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
+import org.apache.mahout.cf.taste.impl.model.jdbc.MySQLJDBCDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
 import org.apache.mahout.cf.taste.impl.recommender.CachingRecommender;
 import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
@@ -44,6 +47,7 @@ public class UserBased implements MotorRecom{
 	private String baseUrl;
 	private ConnectionLMF conLmf;
 	private Configuration cfg;
+	private String orDat;
 	private long userId;
 	private int numRecom;
 	private DataModel model;
@@ -65,9 +69,19 @@ public class UserBased implements MotorRecom{
 		this.userId=userId;
 		this.cfg=cfg;
 		this.numRecom=Integer.parseInt(cfg.getProperty("numRecom"));
+		this.orDat=cfg.getProperty("origendat");
 		log.info("Numero de recomendaciones solicitadas: "+this.numRecom);
-		String filePath = baseUrl+"resources/"+cfg.getProperty("fichero");
-		this.model = new FileDataModel(new File(filePath));
+		if (orDat.equals("file")) {
+			// Si se basa el modelo de datos se encuentra en un fichero csv
+			String filePath = baseUrl+"resources/"+cfg.getProperty("fichero");
+			this.model = new FileDataModel(new File(filePath));
+		} else if (orDat.equals("bd")) {
+			// Si el modelo de datos se ha configurado en una base de datos MySQL
+			this.model = new MySQLJDBCDataModel(cfg.getDataSource(), cfg.getProperty("nametable"), 
+					cfg.getProperty("coluser"), cfg.getProperty("coloffer"), cfg.getProperty("colpref"), null);
+		} else {
+			log.error("El origen de datos especificado es incorrecto");
+		}
 		log.info("Construido recomendador UserBased");
 	}
 	
@@ -152,13 +166,12 @@ public class UserBased implements MotorRecom{
 	 * 
 	 * @return valoracion .- Puntuacion de evaluacion del recomendador.
 	 */
-	public Double[] getEval(){
-		Double[] evaluation = new Double[3];
-		String filePath = baseUrl+"resources/"+cfg.getProperty("fichero");
-		double evalPorc = Double.parseDouble(cfg.getProperty("conjEva"));
+	public Double[] getEval(){		
+		Double[] evaluation = new Double[4];
+		double trainingPerc = Double.parseDouble(cfg.getProperty("entPorc"));
+		double evalPerc = Double.parseDouble(cfg.getProperty("evalPorc"));
 		int recomToCons = Integer.parseInt(cfg.getProperty("recomToCons"));
 		try {
-			DataModel myModel = new FileDataModel(new File(filePath));
 			
 			RecommenderBuilder builder = new RecommenderBuilder() {
 				public Recommender buildRecommender(DataModel model) throws TasteException {
@@ -167,15 +180,15 @@ public class UserBased implements MotorRecom{
 					return new GenericUserBasedRecommender(model, neighborhood, userSimilarity);
 				}
 			};
+	
+			RecommenderEvaluator evaluator = new AverageAbsoluteDifferenceRecommenderEvaluator();
+			evaluation[0] = evaluator.evaluate(builder, null, model, trainingPerc, evalPerc);
 			
 			RecommenderIRStatsEvaluator evaluatorIR = new GenericRecommenderIRStatsEvaluator();
-			IRStatistics stats = evaluatorIR.evaluate(builder, null, myModel, null, recomToCons, GenericRecommenderIRStatsEvaluator.CHOOSE_THRESHOLD, evalPorc);
-			evaluation[0] = stats.getPrecision();
-			evaluation[1] = stats.getRecall();
-			evaluation[2] = stats.getF1Measure();
-		} catch (IOException e) {
-			log.error("Error al construir el dataModel en la evaluacion");
-			e.printStackTrace();
+			IRStatistics stats = evaluatorIR.evaluate(builder, null, model, null, recomToCons, GenericRecommenderIRStatsEvaluator.CHOOSE_THRESHOLD, evalPerc);
+			evaluation[1] = stats.getPrecision();
+			evaluation[2] = stats.getRecall();
+			evaluation[3] = stats.getF1Measure();
 		} catch (TasteException e) {
 			log.error("Error a evaluar el recomendador UserBased");
 			e.printStackTrace();

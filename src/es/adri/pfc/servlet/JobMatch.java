@@ -108,9 +108,10 @@ public class JobMatch extends HttpServlet{
 		log.info("");
 		Double[] resulteval = recom.getEval();
 		log.info("El resultado de evaluacion del sistema recomendador es: ");
-		log.info("Precision = "+resulteval[0]);
-		log.info("Recall = "+resulteval[1]);
-		log.info("Medida F1 ="+resulteval[2]);
+		log.info("MAE = "+resulteval[0]);
+		log.info("Precision = "+resulteval[1]);
+		log.info("Recall = "+resulteval[2]);
+		log.info("Medida F1 ="+resulteval[3]);
 
 		
 		// Devolviendo la salida
@@ -134,11 +135,14 @@ public class JobMatch extends HttpServlet{
 		String user = request.getParameter("user");
 		String search = request.getParameter("offer");
 		String action = request.getParameter("action");
-		FeedBack feed = new FeedBack(baseUrl, user, search, cfg);
-		if (action.equals("add"))
-			feed.introduceRate();
-		else if (action.equals("delete"))
-			feed.deletePunt();
+		String orDat = cfg.getProperty("origendat");
+		FeedBack feed;
+		if (orDat.equals("file")) {
+			feed = new FeedBack(baseUrl, cfg, user, search);
+		} else {
+			feed = new FeedBack(baseUrl, cfg, user, search, true);
+		}
+		feed.applyAction(action);
 		
 		// Devuelve respuesta
 		response.setContentType("application/json");
